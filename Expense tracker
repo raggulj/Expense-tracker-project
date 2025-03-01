@@ -1,0 +1,113 @@
+import sqlite3
+from datetime import datetime
+
+# Database setup
+conn = sqlite3.connect("expenses.db")
+cursor = conn.cursor()
+
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS expenses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    amount REAL,
+    category TEXT,
+    description TEXT,
+    date TEXT
+)
+''')
+conn.commit()
+
+def add_expense(amount, category, description):
+    """Adds an expense to the database."""
+    date = datetime.now().strftime("%Y-%m-%d")
+    cursor.execute("INSERT INTO expenses (amount, category, description, date) VALUES (?, ?, ?, ?)",
+                   (amount, category, description, date))
+    conn.commit()
+    print("Expense added successfully!\n")
+
+def view_expenses():
+    """Displays all expenses."""
+    cursor.execute("SELECT * FROM expenses")
+    records = cursor.fetchall()
+    
+    if not records:
+        print("No expenses recorded yet.")
+        return
+    
+    print("\n--- Expense List ---")
+    for row in records:
+        print(f"ID: {row[0]}, Amount: ${row[1]}, Category: {row[2]}, Description: {row[3]}, Date: {row[4]}")
+    print()
+
+def delete_expense(expense_id):
+    """Deletes an expense by ID."""
+    cursor.execute("DELETE FROM expenses WHERE id = ?", (expense_id,))
+    conn.commit()
+    print("Expense deleted successfully!\n")
+
+def summary_by_category():
+    """Displays total spending per category."""
+    cursor.execute("SELECT category, SUM(amount) FROM expenses GROUP BY category")
+    records = cursor.fetchall()
+    
+    print("\n--- Category-wise Summary ---")
+    for row in records:
+        print(f"Category: {row[0]}, Total Spent: ${row[1]}")
+    print()
+
+def monthly_summary():
+    """Displays total expenses for the current month."""
+    current_month = datetime.now().strftime("%Y-%m")
+    cursor.execute("SELECT SUM(amount) FROM expenses WHERE date LIKE ?", (f"{current_month}%",))
+    total = cursor.fetchone()[0]
+    
+    print(f"\nTotal expenses for {current_month}: ${total if total else 0}\n")
+
+# CLI Menu
+def main():
+    while True:
+        print("Expense Tracker")
+        print("1. Add Expense")
+        print("2. View Expenses")
+        print("3. Delete Expense")
+        print("4. Category Summary")
+        print("5. Monthly Summary")
+        print("6. Exit")
+        
+        choice = input("Enter your choice: ")
+        
+        if choice == "1":
+            try:
+                amount = float(input("Enter amount: "))
+                category = input("Enter category: ")
+                description = input("Enter description: ")
+                add_expense(amount, category, description)
+            except ValueError:
+                print("Invalid input. Please enter a valid amount.")
+        
+        elif choice == "2":
+            view_expenses()
+        
+        elif choice == "3":
+            try:
+                expense_id = int(input("Enter expense ID to delete: "))
+                delete_expense(expense_id)
+            except ValueError:
+                print("Invalid ID. Please enter a number.")
+        
+        elif choice == "4":
+            summary_by_category()
+        
+        elif choice == "5":
+            monthly_summary()
+        
+        elif choice == "6":
+            print("Exiting Expense Tracker. Goodbye!")
+            conn.close()
+            break
+        
+        else:
+            print("Invalid choice. Please try again.")
+
+# Run the program
+if __name__ == "__main__":
+    main()
